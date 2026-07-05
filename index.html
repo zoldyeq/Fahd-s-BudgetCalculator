@@ -35,16 +35,17 @@
   .toggle button.active { background: var(--ink); color: #fff; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 24px 28px; }
   .input-shell { position: relative; }
-  input[type=number] {
-    width: 100%; font-size: 17px; font-family: inherit; color: var(--ink);
-    padding: 12px 56px 12px 14px; text-align: right; background: var(--paper);
+  input.amount {
+    width: 100%; font-size: 17px; font-weight: 600; font-family: inherit; color: var(--ink);
+    padding: 12px 46px 12px 12px; text-align: right; background: var(--paper);
     border: 1px solid var(--line); border-radius: 10px; outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s; -moz-appearance: textfield;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    scroll-margin: 120px;
   }
-  html[dir=rtl] input[type=number] { text-align: left; padding: 12px 14px 12px 56px; }
-  input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input.amount::placeholder { font-weight: 400; }
+  html[dir=rtl] input.amount { text-align: left; padding: 12px 12px 12px 46px; }
   input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-bg); }
-  .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--muted); font-weight: 500; pointer-events: none; }
+  .unit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--muted); font-weight: 500; pointer-events: none; }
   html[dir=rtl] .unit { right: auto; left: 14px; }
   .split { display: flex; gap: 26px; align-items: flex-start; }
   .col-left { flex: 1 1 340px; min-width: 300px; }
@@ -102,6 +103,12 @@
   @media (max-width: 640px) {
     .split { flex-direction: column; }
     .col-right { position: static; flex-basis: auto; width: 100%; }
+    .row { gap: 8px; }
+    .row-label { width: 88px; font-size: 13px; }
+    .row .share { width: 34px; font-size: 12px; }
+    .row .input-shell { flex: 1 1 auto; min-width: 0; }
+    input.amount { font-size: 16px; padding: 12px 40px 12px 10px; }
+    html[dir=rtl] input.amount { padding: 12px 10px 12px 40px; }
   }
 </style>
 </head>
@@ -247,7 +254,15 @@
   let expenseRows = T.en.expenseCats.map((_, i) => ({ id: ++uid, catIndex: i, editable: false, value: '' }));
 
   function t() { return T[lang]; }
-  function fmt(n) { return new Intl.NumberFormat(t().numLocale, { maximumFractionDigits: 0 }).format(n); }
+  function fmt(n) { return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n); }
+  function normalizeDigits(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/[\u0660-\u0669]/g, d => d.charCodeAt(0) - 0x0660)
+      .replace(/[\u06F0-\u06F9]/g, d => d.charCodeAt(0) - 0x06F0)
+      .replace(/[^0-9.]/g, '');
+  }
+  function num(s) { return parseFloat(normalizeDigits(s)) || 0; }
   function money(n) { return fmt(n) + ' ' + t().currency; }
   function scale(v) { return period === 'year' ? v * 12 : v; }
   function labelFor(r, kind) {
@@ -310,12 +325,21 @@
       const shell = document.createElement('div');
       shell.className = 'input-shell';
       const amount = document.createElement('input');
-      amount.type = 'number';
-      amount.min = '0';
+      amount.className = 'amount';
+      amount.type = 'text';
       amount.inputMode = 'decimal';
+      amount.setAttribute('autocomplete', 'off');
       amount.placeholder = '0';
       amount.value = r.value;
-      amount.addEventListener('input', e => { r.value = e.target.value; update(); });
+      amount.addEventListener('focus', e => {
+        setTimeout(() => { e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300);
+      });
+      amount.addEventListener('input', e => {
+        const clean = normalizeDigits(e.target.value);
+        if (clean !== e.target.value) e.target.value = clean;
+        r.value = clean;
+        update();
+      });
       const unit = document.createElement('span');
       unit.className = 'unit';
       unit.textContent = t().currency;
@@ -348,7 +372,7 @@
 
   function sumRows(rows) {
     let s = 0;
-    rows.forEach(r => { s += parseFloat(r.value) || 0; });
+    rows.forEach(r => { s += num(r.value); });
     return s;
   }
 
@@ -375,7 +399,7 @@
     const r = 46, cx = 60, cy = 60, circ = 2 * Math.PI * r;
     let offset = 0;
     rows.forEach((row, i) => {
-      const v = parseFloat(row.value) || 0;
+      const v = num(row.value);
       if (v <= 0) return;
       const frac = v / total;
 
@@ -411,7 +435,7 @@
     [['income', incomeRows], ['expense', expenseRows]].forEach(([kind, rows]) => {
       const tot = kind === 'income' ? incomeTotal : expenseTotal;
       rows.forEach(r => {
-        const v = parseFloat(r.value) || 0;
+        const v = num(r.value);
         const s = el('share-' + r.id);
         if (s) s.textContent = tot > 0 ? Math.round((v / tot) * 100) + '%' : '—';
       });
