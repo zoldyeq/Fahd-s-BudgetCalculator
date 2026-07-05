@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Calculator</title>
+<style>
+  :root {
+    --ink: #1a2b2b; --paper: #f6f4ee; --card: #ffffff; --line: #e2ded4;
+    --muted: #6b7472; --teal: #0f6e56; --teal-bg: #e1f5ee; --red: #a32d2d; --accent: #c99a3f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Segoe UI Arabic", Tahoma, sans-serif;
+    background: var(--paper); color: var(--ink); min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center; padding: 24px; line-height: 1.5;
+  }
+  .wrap { width: 100%; max-width: 760px; }
+  .topbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+  .lang { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .lang button {
+    border: none; background: transparent; font-family: inherit; font-size: 13px; font-weight: 500;
+    color: var(--muted); padding: 5px 14px; border-radius: 999px; cursor: pointer; transition: background 0.15s, color 0.15s;
+  }
+  .lang button.active { background: var(--ink); color: #fff; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 6px; }
+  html[dir=rtl] .eyebrow { letter-spacing: 0; }
+  .head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 22px; flex-wrap: wrap; gap: 12px; }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+  .toggle { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .toggle button {
+    border: none; background: transparent; font-family: inherit; font-size: 13px; font-weight: 500;
+    color: var(--muted); padding: 6px 16px; border-radius: 999px; cursor: pointer; transition: background 0.15s, color 0.15s;
+  }
+  .toggle button.active { background: var(--ink); color: #fff; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 24px 28px; }
+  .input-shell { position: relative; }
+  input[type=number] {
+    width: 100%; font-size: 17px; font-family: inherit; color: var(--ink);
+    padding: 12px 56px 12px 14px; text-align: right; background: var(--paper);
+    border: 1px solid var(--line); border-radius: 10px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s; -moz-appearance: textfield;
+  }
+  html[dir=rtl] input[type=number] { text-align: left; padding: 12px 14px 12px 56px; }
+  input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-bg); }
+  .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--muted); font-weight: 500; pointer-events: none; }
+  html[dir=rtl] .unit { right: auto; left: 14px; }
+  .split { display: flex; gap: 26px; align-items: flex-start; }
+  .col-left { flex: 1 1 340px; min-width: 300px; }
+  .col-right { flex: 0 0 236px; position: sticky; top: 24px; }
+  .donut-panel { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px 18px; }
+  .section-title {
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    font-weight: 600; margin: 24px 0 14px; padding-top: 22px; border-top: 1px solid var(--line);
+  }
+  .section-title.first { margin-top: 6px; padding-top: 0; border-top: none; }
+  html[dir=rtl] .section-title { letter-spacing: 0; }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+  .dot { flex: 0 0 auto; width: 11px; height: 11px; border-radius: 3px; }
+  .row-label { flex: 0 0 auto; width: 122px; font-size: 14px; color: var(--ink); font-weight: 500; }
+  .row-label input.name-input {
+    width: 100%; font-size: 14px; font-weight: 500; font-family: inherit; color: var(--ink);
+    background: transparent; border: none; border-bottom: 1px dashed var(--line); padding: 4px 2px; outline: none;
+  }
+  .row-label input.name-input:focus { border-bottom-color: var(--teal); }
+  .row .input-shell { flex: 1; }
+  .row .share { flex: 0 0 auto; width: 42px; text-align: right; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  html[dir=rtl] .row .share { text-align: left; }
+  .row .remove {
+    flex: 0 0 auto; width: 22px; height: 22px; border: none; background: transparent; color: var(--muted);
+    font-size: 18px; line-height: 1; cursor: pointer; border-radius: 6px; transition: background 0.15s, color 0.15s;
+  }
+  .row .remove:hover { background: #fcebeb; color: var(--red); }
+  .row .remove.hidden { visibility: hidden; }
+  .add-btn {
+    margin-top: 6px; width: 100%; padding: 11px; border: 1px dashed var(--line); background: transparent;
+    border-radius: 10px; color: var(--muted); font-family: inherit; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  }
+  .add-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .total-line { display: flex; justify-content: space-between; align-items: baseline; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .total-line .lbl { font-size: 14px; color: var(--muted); font-weight: 500; }
+  .total-line .val { font-size: 22px; font-weight: 600; }
+  .donut-wrap { text-align: center; }
+  .legend { margin-top: 16px; display: flex; flex-direction: column; gap: 9px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-row .l-dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 2px; }
+  .legend-row .l-name { flex: 1; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-row .l-share { flex: 0 0 auto; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; }
+  html[dir=rtl] .legend-row .l-share { direction: ltr; }
+  .legend-empty { font-size: 12px; color: var(--muted); text-align: center; margin-top: 14px; }
+  .result { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); text-align: center; }
+  .result-label { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  html[dir=rtl] .result-label { letter-spacing: 0; }
+  .net { font-size: 36px; font-weight: 600; letter-spacing: -0.02em; transition: color 0.15s; }
+  .rate { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .bar { margin-top: 16px; height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .bar-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--teal); transition: width 0.35s ease, background 0.2s; }
+  .bar-caption { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .hint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 18px; }
+  @media (max-width: 640px) {
+    .split { flex-direction: column; }
+    .col-right { position: static; flex-basis: auto; width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="lang" id="lang">
+        <button data-lang="en" class="active">English</button>
+        <button data-lang="ar">العربية</button>
+      </div>
+    </div>
+
+    <p class="eyebrow" id="eyebrow"></p>
+    <div class="head">
+      <h1 id="title"></h1>
+      <div class="toggle" id="toggle">
+        <button data-period="month" class="active" id="btnMonth"></button>
+        <button data-period="year" id="btnYear"></button>
+      </div>
+    </div>
+
+    <div class="card">
+
+      <!-- INCOME -->
+      <div class="split">
+        <div class="col-left">
+          <p class="section-title first" id="incomeTitle"></p>
+          <div id="incomeRows"></div>
+          <button class="add-btn" id="addIncomeBtn"></button>
+          <div class="total-line">
+            <span class="lbl" id="incomeTotalLabel"></span>
+            <span class="val" id="incomeTotal">SAR 0</span>
+          </div>
+        </div>
+        <div class="col-right">
+          <div class="donut-panel">
+            <div class="donut-wrap">
+              <svg viewBox="0 0 120 120" width="170" height="170" role="img" aria-label="Income breakdown">
+                <circle cx="60" cy="60" r="46" fill="none" stroke="var(--line)" stroke-width="16"></circle>
+                <g id="incomeSegments"></g>
+                <text id="incomeHoleLabel" x="60" y="55" text-anchor="middle" fill="var(--muted)" style="font-size:7px;letter-spacing:0.08em;"></text>
+                <text id="incomeHoleVal" x="60" y="70" text-anchor="middle" fill="var(--ink)" style="font-size:11px;font-weight:600;">—</text>
+              </svg>
+            </div>
+            <div class="legend" id="incomeLegend"></div>
+            <p class="legend-empty" id="incomeLegendEmpty"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPENSES -->
+      <div class="split" style="margin-top:26px;">
+        <div class="col-left">
+          <p class="section-title" id="expensesTitle"></p>
+          <div id="expenseRows"></div>
+          <button class="add-btn" id="addExpenseBtn"></button>
+          <div class="total-line">
+            <span class="lbl" id="expenseTotalLabel"></span>
+            <span class="val" id="expenseTotal">SAR 0</span>
+          </div>
+        </div>
+        <div class="col-right">
+          <div class="donut-panel">
+            <div class="donut-wrap">
+              <svg viewBox="0 0 120 120" width="170" height="170" role="img" aria-label="Expense breakdown">
+                <circle cx="60" cy="60" r="46" fill="none" stroke="var(--line)" stroke-width="16"></circle>
+                <g id="expenseSegments"></g>
+                <text id="expenseHoleLabel" x="60" y="55" text-anchor="middle" fill="var(--muted)" style="font-size:7px;letter-spacing:0.08em;"></text>
+                <text id="expenseHoleVal" x="60" y="70" text-anchor="middle" fill="var(--ink)" style="font-size:11px;font-weight:600;">—</text>
+              </svg>
+            </div>
+            <div class="legend" id="expenseLegend"></div>
+            <p class="legend-empty" id="expenseLegendEmpty"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULT -->
+      <div class="result">
+        <p class="result-label" id="netLabel"></p>
+        <div class="net" id="net">SAR 0</div>
+        <p class="rate" id="rate"></p>
+        <div class="bar"><div class="bar-fill" id="bar"></div></div>
+        <p class="bar-caption" id="caption"></p>
+      </div>
+
+      <p class="hint" id="hint"></p>
+    </div>
+  </div>
+
+<script>
+  const INCOME_PALETTE  = ['#0f6e56','#378add','#7f77dd','#5dcaa5','#185fa5','#639922','#c99a3f','#d4537e'];
+  const EXPENSE_PALETTE = ['#0f6e56','#c99a3f','#378add','#d85a30','#7f77dd','#d4537e','#639922','#5dcaa5','#ba7517','#185fa5'];
+
+  const T = {
+    en: {
+      dir: 'ltr', currency: 'SAR', numLocale: 'en-US',
+      eyebrow: 'Personal finance', title: 'Budget calculator',
+      month: 'Monthly', year: 'Annual',
+      income: 'Income', expenses: 'Expenses',
+      addIncome: '+ Add income', addExpense: '+ Add expense',
+      totalIncome: 'Total income', totalExpenses: 'Total expenses',
+      nameIt: 'Name it', netIncome: 'Net income',
+      incomeDonut: 'INCOME', expenseDonut: 'EXPENSES',
+      incomeEmpty: 'Enter amounts to see the breakdown',
+      expenseEmpty: 'Enter amounts to see the breakdown',
+      savingsRate: n => 'Savings rate ' + n + '%', savingsDash: 'Savings rate —',
+      expenseShare: n => 'Expenses are ' + n + '% of your income', expenseDash: 'Expenses as a share of income —',
+      hintDefault: 'Keeping expenses under 80% of income leaves you 20%+ to save.',
+      hintOver: 'Your expenses exceed your income.',
+      hintGood: 'On track — expenses under 80%, saving 20% or more.',
+      hintTight: 'Expenses above 80% — less than 20% left to save.',
+      incomeCats: ['Basic income','Secondary income','Investment income'],
+      expenseCats: ['Rent','FoodStuff','Electricity','Water bill','Petrol','Debts','Investment']
+    },
+    ar: {
+      dir: 'rtl', currency: 'ريال', numLocale: 'ar-SA',
+      eyebrow: 'التمويل الشخصي', title: 'حاسبة الميزانية',
+      month: 'شهري', year: 'سنوي',
+      income: 'الدخل', expenses: 'المصروفات',
+      addIncome: '+ إضافة دخل', addExpense: '+ إضافة مصروف',
+      totalIncome: 'إجمالي الدخل', totalExpenses: 'إجمالي المصروفات',
+      nameIt: 'اكتب الاسم', netIncome: 'صافي الدخل',
+      incomeDonut: 'الدخل', expenseDonut: 'المصروفات',
+      incomeEmpty: 'أدخل المبالغ لعرض التوزيع',
+      expenseEmpty: 'أدخل المبالغ لعرض التوزيع',
+      savingsRate: n => 'معدل الادخار ' + n + '%', savingsDash: 'معدل الادخار —',
+      expenseShare: n => 'المصروفات تمثل ' + n + '% من دخلك', expenseDash: 'نسبة المصروفات من الدخل —',
+      hintDefault: 'إبقاء المصروفات تحت 80% من الدخل يترك لك 20%+ للادخار.',
+      hintOver: 'مصروفاتك تتجاوز دخلك.',
+      hintGood: 'أنت على المسار الصحيح — المصروفات تحت 80%، وتدّخر 20% أو أكثر.',
+      hintTight: 'المصروفات فوق 80% — أقل من 20% متبقٍ للادخار.',
+      incomeCats: ['الدخل الأساسي','الدخل الثانوي','دخل الاستثمار'],
+      expenseCats: ['الإيجار','المواد الغذائية','الكهرباء','فاتورة الماء','بنزين','الديون','الاستثمار']
+    }
+  };
+
+  let lang = 'en';
+  let period = 'month';
+  let uid = 0;
+
+  let incomeRows  = T.en.incomeCats.map((_, i)  => ({ id: ++uid, catIndex: i, editable: false, value: '' }));
+  let expenseRows = T.en.expenseCats.map((_, i) => ({ id: ++uid, catIndex: i, editable: false, value: '' }));
+
+  function t() { return T[lang]; }
+  function fmt(n) { return new Intl.NumberFormat(t().numLocale, { maximumFractionDigits: 0 }).format(n); }
+  function money(n) { return fmt(n) + ' ' + t().currency; }
+  function scale(v) { return period === 'year' ? v * 12 : v; }
+  function labelFor(r, kind) {
+    if (r.editable) return r.customLabel || '';
+    return kind === 'income' ? t().incomeCats[r.catIndex] : t().expenseCats[r.catIndex];
+  }
+  function paletteFor(kind, i) {
+    const p = kind === 'income' ? INCOME_PALETTE : EXPENSE_PALETTE;
+    return p[i % p.length];
+  }
+
+  const el = id => document.getElementById(id);
+
+  function applyStaticText() {
+    const d = t();
+    document.documentElement.dir = d.dir;
+    document.documentElement.lang = lang;
+    el('eyebrow').textContent = d.eyebrow;
+    el('title').textContent = d.title;
+    el('btnMonth').textContent = d.month;
+    el('btnYear').textContent = d.year;
+    el('incomeTitle').textContent = d.income;
+    el('expensesTitle').textContent = d.expenses;
+    el('addIncomeBtn').textContent = d.addIncome;
+    el('addExpenseBtn').textContent = d.addExpense;
+    el('incomeTotalLabel').textContent = d.totalIncome;
+    el('expenseTotalLabel').textContent = d.totalExpenses;
+    el('netLabel').textContent = d.netIncome;
+    el('incomeHoleLabel').textContent = d.incomeDonut;
+    el('expenseHoleLabel').textContent = d.expenseDonut;
+  }
+
+  function renderRows(kind) {
+    const rows = kind === 'income' ? incomeRows : expenseRows;
+    const container = el(kind === 'income' ? 'incomeRows' : 'expenseRows');
+    container.innerHTML = '';
+    rows.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = paletteFor(kind, i);
+
+      const labelWrap = document.createElement('div');
+      labelWrap.className = 'row-label';
+      if (r.editable) {
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'name-input';
+        nameInput.value = r.customLabel || '';
+        nameInput.placeholder = t().nameIt;
+        nameInput.setAttribute('aria-label', 'Name this ' + kind);
+        nameInput.addEventListener('input', e => { r.customLabel = e.target.value; update(); });
+        labelWrap.appendChild(nameInput);
+      } else {
+        labelWrap.textContent = labelFor(r, kind);
+      }
+
+      const shell = document.createElement('div');
+      shell.className = 'input-shell';
+      const amount = document.createElement('input');
+      amount.type = 'number';
+      amount.min = '0';
+      amount.inputMode = 'decimal';
+      amount.placeholder = '0';
+      amount.value = r.value;
+      amount.addEventListener('input', e => { r.value = e.target.value; update(); });
+      const unit = document.createElement('span');
+      unit.className = 'unit';
+      unit.textContent = t().currency;
+      shell.appendChild(amount);
+      shell.appendChild(unit);
+
+      const share = document.createElement('span');
+      share.className = 'share';
+      share.id = 'share-' + r.id;
+      share.textContent = '—';
+
+      const remove = document.createElement('button');
+      remove.className = 'remove' + (r.editable ? '' : ' hidden');
+      remove.innerHTML = '&times;';
+      remove.setAttribute('aria-label', 'Remove');
+      remove.addEventListener('click', () => {
+        if (kind === 'income') incomeRows = incomeRows.filter(x => x.id !== r.id);
+        else expenseRows = expenseRows.filter(x => x.id !== r.id);
+        renderRows(kind); update();
+      });
+
+      row.appendChild(dot);
+      row.appendChild(labelWrap);
+      row.appendChild(shell);
+      row.appendChild(share);
+      row.appendChild(remove);
+      container.appendChild(row);
+    });
+  }
+
+  function sumRows(rows) {
+    let s = 0;
+    rows.forEach(r => { s += parseFloat(r.value) || 0; });
+    return s;
+  }
+
+  function drawDonut(kind, total) {
+    const segEl = el(kind === 'income' ? 'incomeSegments' : 'expenseSegments');
+    const holeVal = el(kind === 'income' ? 'incomeHoleVal' : 'expenseHoleVal');
+    const legend = el(kind === 'income' ? 'incomeLegend' : 'expenseLegend');
+    const legendEmpty = el(kind === 'income' ? 'incomeLegendEmpty' : 'expenseLegendEmpty');
+    const rows = kind === 'income' ? incomeRows : expenseRows;
+
+    segEl.innerHTML = '';
+    legend.innerHTML = '';
+    holeVal.textContent = total > 0 ? money(Math.round(scale(total))) : '—';
+
+    if (total <= 0) {
+      legend.style.display = 'none';
+      legendEmpty.style.display = 'block';
+      legendEmpty.textContent = kind === 'income' ? t().incomeEmpty : t().expenseEmpty;
+      return;
+    }
+    legend.style.display = 'flex';
+    legendEmpty.style.display = 'none';
+
+    const r = 46, cx = 60, cy = 60, circ = 2 * Math.PI * r;
+    let offset = 0;
+    rows.forEach((row, i) => {
+      const v = parseFloat(row.value) || 0;
+      if (v <= 0) return;
+      const frac = v / total;
+
+      const seg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      seg.setAttribute('cx', cx); seg.setAttribute('cy', cy); seg.setAttribute('r', r);
+      seg.setAttribute('fill', 'none');
+      seg.setAttribute('stroke', paletteFor(kind, i));
+      seg.setAttribute('stroke-width', '16');
+      seg.setAttribute('stroke-dasharray', (frac * circ) + ' ' + circ);
+      seg.setAttribute('stroke-dashoffset', -offset * circ);
+      seg.setAttribute('transform', 'rotate(-90 ' + cx + ' ' + cy + ')');
+      seg.style.transition = 'stroke-dasharray 0.3s ease';
+      segEl.appendChild(seg);
+      offset += frac;
+
+      const lr = document.createElement('div');
+      lr.className = 'legend-row';
+      const ld = document.createElement('span');
+      ld.className = 'l-dot'; ld.style.background = paletteFor(kind, i);
+      const ln = document.createElement('span');
+      ln.className = 'l-name'; ln.textContent = labelFor(row, kind) || t().nameIt;
+      const ls = document.createElement('span');
+      ls.className = 'l-share'; ls.textContent = Math.round(frac * 100) + '%';
+      lr.appendChild(ld); lr.appendChild(ln); lr.appendChild(ls);
+      legend.appendChild(lr);
+    });
+  }
+
+  function update() {
+    const incomeTotal = sumRows(incomeRows);
+    const expenseTotal = sumRows(expenseRows);
+
+    [['income', incomeRows], ['expense', expenseRows]].forEach(([kind, rows]) => {
+      const tot = kind === 'income' ? incomeTotal : expenseTotal;
+      rows.forEach(r => {
+        const v = parseFloat(r.value) || 0;
+        const s = el('share-' + r.id);
+        if (s) s.textContent = tot > 0 ? Math.round((v / tot) * 100) + '%' : '—';
+      });
+    });
+
+    el('incomeTotal').textContent = money(Math.round(scale(incomeTotal)));
+    el('expenseTotal').textContent = money(Math.round(scale(expenseTotal)));
+
+    drawDonut('income', incomeTotal);
+    drawDonut('expense', expenseTotal);
+
+    const nMonthly = incomeTotal - expenseTotal;
+    el('net').textContent = (nMonthly < 0 ? '\u2212' : '') + money(Math.abs(Math.round(scale(nMonthly))));
+    el('net').style.color = nMonthly > 0 ? 'var(--teal)' : nMonthly < 0 ? 'var(--red)' : 'var(--ink)';
+
+    const d = t();
+    if (incomeTotal > 0) {
+      const savingsRate = Math.round((nMonthly / incomeTotal) * 100);
+      const expenseRate = Math.round((expenseTotal / incomeTotal) * 100);
+      el('rate').textContent = d.savingsRate(savingsRate);
+      el('caption').textContent = d.expenseShare(expenseRate);
+      el('bar').style.width = Math.max(0, Math.min(100, expenseRate)) + '%';
+      el('bar').style.background = expenseRate > 100 ? 'var(--red)' : expenseRate > 80 ? 'var(--accent)' : 'var(--teal)';
+      if (nMonthly < 0) el('hint').textContent = d.hintOver;
+      else if (expenseRate <= 80) el('hint').textContent = d.hintGood;
+      else el('hint').textContent = d.hintTight;
+    } else {
+      el('rate').textContent = d.savingsDash;
+      el('caption').textContent = d.expenseDash;
+      el('bar').style.width = '0%';
+      el('hint').textContent = d.hintDefault;
+    }
+  }
+
+  el('addIncomeBtn').addEventListener('click', () => {
+    incomeRows.push({ id: ++uid, editable: true, customLabel: '', value: '' });
+    renderRows('income'); update();
+  });
+  el('addExpenseBtn').addEventListener('click', () => {
+    expenseRows.push({ id: ++uid, editable: true, customLabel: '', value: '' });
+    renderRows('expense'); update();
+  });
+
+  el('toggle').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    period = btn.dataset.period;
+    document.querySelectorAll('#toggle button').forEach(b => b.classList.toggle('active', b === btn));
+    update();
+  });
+
+  el('lang').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    lang = btn.dataset.lang;
+    document.querySelectorAll('#lang button').forEach(b => b.classList.toggle('active', b === btn));
+    applyStaticText();
+    renderRows('income'); renderRows('expense');
+    update();
+  });
+
+  applyStaticText();
+  renderRows('income');
+  renderRows('expense');
+  update();
+</script>
+</body>
+</html>
